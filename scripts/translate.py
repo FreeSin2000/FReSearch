@@ -18,29 +18,16 @@ Layout:
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
-import os
 import re
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
+
+from lib.store import atomic_write, sha256_text, utc_now
 
 HEADING = re.compile(r"^#{1,6}\s+", re.M)
 TABLE_ROW = re.compile(r"^\|", re.M)
 IMAGE = re.compile(r"!\[[^\]]*\]\(pics/[^)]+\)")
-
-
-def repo_root() -> Path:
-    return Path(__file__).resolve().parent.parent
-
-
-def sha256(text: str) -> str:
-    return hashlib.sha256(text.encode("utf-8")).hexdigest()
-
-
-def now() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def counts(text: str) -> dict:
@@ -95,19 +82,12 @@ def chunk_sections(sections: list[str], target: int) -> list[str]:
     return chunks
 
 
-def atomic_write(path: Path, text: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(path.suffix + ".tmp")
-    tmp.write_text(text, encoding="utf-8")
-    os.replace(tmp, path)
-
-
 def prepare(paper_dir: Path, target: int, force: bool) -> int:
     md_path = paper_dir / "md" / "paper.md"
     if not md_path.exists():
         sys.exit(f"error: missing {md_path}")
     text = md_path.read_text(encoding="utf-8")
-    digest = sha256(text)
+    digest = sha256_text(text)
     zh = paper_dir / "zh"
     manifest_path = zh / "manifest.json"
 
@@ -121,7 +101,7 @@ def prepare(paper_dir: Path, target: int, force: bool) -> int:
     manifest = {
         "source": "md/paper.md",
         "source_sha256": digest,
-        "created_at": now(),
+        "created_at": utc_now(),
         "target_chars": target,
         "chunks": [],
     }
@@ -148,7 +128,7 @@ def assemble(paper_dir: Path, strict: bool) -> int:
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     md_path = paper_dir / "md" / "paper.md"
     problems: list[str] = []
-    if md_path.exists() and sha256(md_path.read_text(encoding="utf-8")) != manifest["source_sha256"]:
+    if md_path.exists() and sha256_text(md_path.read_text(encoding="utf-8")) != manifest["source_sha256"]:
         problems.append("md/paper.md changed since prepare; re-run prepare")
 
     out: list[str] = []
@@ -179,7 +159,7 @@ def assemble(paper_dir: Path, strict: bool) -> int:
     atomic_write(zh / "paper.zh.md", result)
     report = {
         "source_sha256": manifest["source_sha256"],
-        "assembled_at": now(),
+        "assembled_at": utc_now(),
         "chunks": report_chunks,
         **{f"total_{k}": v for k, v in counts(result).items()},
     }
