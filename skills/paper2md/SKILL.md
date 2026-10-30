@@ -1,6 +1,6 @@
 ---
 name: paper2md
-description: Convert a two-column (IEEE/ACM-style) research paper PDF into Markdown with real paragraphs, Markdown tables and cropped vector figures. Use when a paper PDF is added to papers/_inbox, when a paper needs re-conversion, or when figures/tables must be extracted. Includes an optional English-Markdown → Chinese-Markdown translation step. Lightweight PyMuPDF only; no OCR, no ML, no network.
+description: Convert a two-column IEEE- or ACM-style research paper PDF into Markdown with real paragraphs, Markdown tables and cropped figures (vector or bitmap). Use when a paper PDF is added to papers/_inbox, when a paper needs re-conversion, or when figures/tables must be extracted. Includes an optional English-Markdown → Chinese-Markdown translation step. Lightweight PyMuPDF only; no OCR, no ML, no network.
 license: MIT
 compatibility: Requires the repo venv from scripts/bootstrap_env.sh (Python 3.12, pymupdf==1.28.2, pypdf==6.21.2). Works offline after setup.
 ---
@@ -10,10 +10,18 @@ compatibility: Requires the repo venv from scripts/bootstrap_env.sh (Python 3.12
 Turn a **two-column research paper PDF** (IEEE/ACM style) into a paragraph-correct
 Markdown file plus its figures and tables.
 
-> **v1 scope: two-column papers only.** The script still contains a per-page
-> one-column fallback and a `--single-column` flag, but that path is **not
-> validated** in FReSearch yet. Do not claim single-column support; if a
-> single-column paper fails, report it instead of hacking the converter.
+> **v1 scope: two-column papers only**, IEEE and ACM styles. The script still
+> contains a per-page one-column fallback and a `--single-column` flag, but that
+> path is **not validated** in FReSearch yet. Do not claim single-column
+> support; if a single-column paper fails, report it.
+
+| | IEEE style | ACM style |
+|---|---|---|
+| sections | `IV.` / `A.` | `1` / `3.1`; appendices `A`–`D` |
+| abstract | inline `Abstract—` | standalone `Abstract` line |
+| table caption | below the table | **above** the table |
+| figures | usually column-width | often **full-width**, multi-panel |
+| refs | may sit before appendices | refs can precede appendices |
 
 ## When to use
 
@@ -75,14 +83,20 @@ pymupdf_layout" notice on stderr is harmless.
    flattens paragraphs and mangles small-caps headings.
 2. **Mask figures/tables** — blocks whose centre lies inside a figure crop or a
    detected table are dropped, so axis labels do not leak into prose.
-3. **Figures** — for each `Fig. N:` caption, crop the union of vector drawing
-   rects in the caption's column, above the caption and below the previous
-   caption in that column. Vector drawing rects, not embedded-image boxes.
-4. **Tables** — `page.find_tables()`, kept only when a `TABLE n:` caption sits
-   just below; emit a Markdown table. The caption filter rejects chart axes.
-5. **Polish** — merge wrapped subtitle into title, peel headings merged into
-   paragraphs, escape a leading `#` in prose, split references on `[n]`,
-   de-hyphenate soft line breaks using the document's own vocabulary.
+3. **Figures** — for each `Fig. N:` caption, crop the region above the caption:
+   vector drawing rects plus bitmap panels. A caption spanning both columns means
+   a **full-width** figure (crop the full text width). Bitmap panels define the
+   area when present; otherwise the densest drawing cluster is used, so a table
+   sitting above the figure is not swallowed.
+4. **Tables** — `page.find_tables()`, paired with a `TABLE n:` caption **above
+   or below** the table. Merged-header tables that cannot be extracted reliably
+   are masked and replaced by a caption + placeholder line (never silently
+   dropped).
+5. **Polish** — merge same-y lines (a heading can be `3` + `Baseline` on two
+   baselines), peel headings merged into paragraphs, escape a leading `#` in
+   prose, split references on `[n]`, de-hyphenate soft line breaks (inside a
+   block, across blocks, and across columns) using the document's own
+   vocabulary, and strip `0x00/0x01` control bytes left by math glyphs.
 
 ## Two-column layout rules
 
@@ -114,14 +128,26 @@ grep -n '^#' paper.md
 
 # 4. no leaked running headers / copyright lines
 grep -nEi 'authorized licensed use|downloaded on .* from ieee|restrictions apply' paper.md
+
+# 5. no control bytes (would make the file "binary" to grep)
+python -c "import sys;d=open('paper.md','rb').read();print([hex(b) for b in d if b<9 or 13<b<32])"
+
+# 6. complex tables are placeholders, not silent drops
+grep -n '^> Table' paper.md
 ```
 
 Pass criteria: no `missing`, figure count == `figures.json` length == captions,
 table count matches the PDF, headings non-empty and in section order, no leaked
 header lines. If any check fails, report the failure; do not silently accept.
 
-Reference run: Affinity-Model (INFOCOM 2025), 10 pages, 7 figures, 7 tables,
-~390 lines of `paper.md`. Use these numbers to spot regressions.
+Reference runs:
+
+| Paper | pages | figures | tables | headings |
+|---|---|---|---|---|
+| Affinity-Model (INFOCOM 2025), IEEE | 10 | 7 | 7 (all extracted) | 20 |
+| BEAM (USENIX Security 2024), ACM | 18 | 11 (3 full-width) | 3 (1 extracted, 2 placeholders) | 29 |
+
+Use these numbers to spot regressions.
 
 ## Gotchas (hard-won; read before editing the script)
 
@@ -136,6 +162,16 @@ Reference run: Affinity-Model (INFOCOM 2025), 10 pages, 7 figures, 7 tables,
 - **De-hyphenation**: build the vocabulary **after** normalizing `-\n`; building
   it from raw text makes fragments (`evolu`, `deci`) look like real words and
   keeps every soft hyphen.
+- **References across pages**: keep the reference-mode flag at document scope.
+  Resetting it per page turns `K. Claffy, ...` into a heading and mangles refs.
+- **Subsection letters are roman numerals too**: `### C. Evaluation` must be
+  parsed as subsection `C`, not section `III`/`C`. Match `##` for roman sections
+  and `###` for letters.
+- **A table above a figure** can sit inside the figure's drawing union. Bound the
+  crop with the table's bottom rule (and prefer bitmap clusters), or the table
+  disappears into the figure.
+- **Merged table headers** (ACM `Table 3`) are not reliably recoverable with
+  `find_tables`; emit a placeholder with the page number instead of garbage rows.
 
 ## Optional: translate English Markdown → Chinese Markdown
 
@@ -159,6 +195,11 @@ as a manual, opt-in step.
   into the surrounding paragraph. This is a reading aid, not LaTeX-faithful.
 - Tables with merged cells or rotated headers may need a manual touch-up.
 - Figures keep in-figure text in the source language (only captions are text).
+- Merged-header/full-width tables may be placeholders; read them from the PDF.
+- A soft hyphen broken by an inserted figure or footnote stays at a paragraph
+  end (e.g. `differ-` … figure … `ence`); not merged to avoid reordering text.
+- Appendix headings in the `D  Title` form are supported; other bespoke heading
+  styles may stay as paragraphs.
 - Scanned PDFs are refused, not OCR'd.
 - A bad path or corrupt PDF exits non-zero with a traceback; capture the message
   and report it, do not retry blindly.
