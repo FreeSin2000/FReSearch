@@ -203,7 +203,8 @@ def figure_clips(doc):
         res = []
         for label, cap, bb in caps:
             y0 = bb[1]
-            full = (bb[2] - bb[0]) > 0.55 * page.rect.width
+            full = ((bb[2] - bb[0]) > 0.55 * page.rect.width
+                    or abs((bb[0] + bb[2]) / 2 - page.rect.width / 2) <= 8)
             side = "" if full else col_of(bb, page)
             x0, x1 = band(page, side)
             ytop = max(prev.values()) if full else prev[side]
@@ -313,7 +314,7 @@ def rows_plausible(rows):
         return False
     counts = [sum(1 for c in row if c) for row in rows]
     thin = sum(1 for n in counts if n < 2)
-    return thin / len(rows) <= 0.2
+    return thin / len(rows) <= 0.3
 
 
 def find_tables(page):
@@ -419,7 +420,7 @@ def peel_headings(lines):
 def label_near(label, bbox, clips):
     """Guard against body text starting with 'Fig. N.' being read as a caption."""
     for lbl, _, clip in clips:
-        if lbl == label and 0 <= bbox.y0 - clip.y1 <= 80:
+        if lbl == label and -5 <= bbox.y0 - clip.y1 <= 80:
             return True
     return False
 
@@ -508,15 +509,41 @@ def flush_refs(md, refbuf, wordset):
     refbuf.clear()
 
 
-def fallback_table(page, cbb):
-    """Last resort for tables without ruling lines (ACM merged headers).
+def ruled_region(page, cbb):
+    """Region below a caption, bounded by the table's horizontal rules."""
+    width = max(1.0, cbb[2] - cbb[0])
+    rules = []
+    for d in page.get_drawings():
+        r = pymupdf.Rect(d["rect"])
+        if r.height <= 2 and r.width > 0.3 * width \
+                and r.x1 > cbb[0] and r.x0 < cbb[2] and r.y1 > cbb[3] - 2:
+            rules.append(r)
+    rules.sort(key=lambda r: r.y0)
+    first = next((r for r in rules if 0 <= r.y0 - cbb[3] <= 40), None)
+    if first is None:
+        return None
+    bottom, last = first.y1, first
+    for r in rules:
+        if r.y0 <= last.y0:
+            continue
+        if r.y0 - bottom > 25:
+            break
+        bottom, last = r.y1, r
+    return pymupdf.Rect(cbb[0] - 2, cbb[3] + 2, cbb[2] + 2, bottom + 2)
 
-    Uses text-based detection on the region below the caption. Returns
-    (bbox, rows_or_None); rows=None means "mask it but do not emit a table".
+
+def fallback_table(page, cbb):
+    """Last resort for tables without vertical rules.
+
+    Uses text-based detection inside a region bounded by the table's horizontal
+    rules. Returns (bbox, rows_or_None); rows=None means "mask it but do not
+    emit a table".
     """
     x0, x1 = band(page, "")
-    region = pymupdf.Rect(max(cbb[0], x0) - 2, cbb[3] + 2,
-                          min(cbb[2], x1) + 2, cbb[3] + 260)
+    region = ruled_region(page, cbb)
+    if region is None:
+        region = pymupdf.Rect(max(cbb[0], x0) - 2, cbb[3] + 2,
+                              min(cbb[2], x1) + 2, cbb[3] + 260)
     try:
         tabs = page.find_tables(clip=region, strategy="text").tables
     except Exception:  # noqa: BLE001 - detection is best-effort
@@ -527,9 +554,11 @@ def fallback_table(page, cbb):
     bb = pymupdf.Rect(t.bbox)
     if bb.y0 - cbb[3] > 40:
         return None
-    # Text-based detection on merged-header tables is too unreliable to emit:
-    # use its bbox only, to mask the region and emit a caption + placeholder.
-    return (bb, None)
+    rows = [[re.sub(r"\s+", " ", c or "").strip() for c in row]
+            for row in t.extract()]
+    if t.col_count > 12 or not rows_plausible(rows):
+        return (bb, None)
+    return (bb, rows)
 
 
 # --------------------------------------------------------------------------- #

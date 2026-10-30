@@ -1,16 +1,16 @@
 ---
 name: paper2md
-description: Convert a two-column IEEE- or ACM-style research paper PDF into Markdown with real paragraphs, Markdown tables and cropped figures (vector or bitmap). Use when a paper PDF is added to papers/_inbox, when a paper needs re-conversion, or when figures/tables must be extracted. Translation is handled separately by paper-ingest/translate.py. Lightweight PyMuPDF only; no OCR, no ML, no network.
+description: Convert a two-column IEEE-, ACM- or USENIX-style research paper PDF into Markdown with real paragraphs, Markdown tables and cropped figures (vector or bitmap). Use when a paper PDF is added to papers/_inbox, when a paper needs re-conversion, or when figures/tables must be extracted. Translation is handled separately by paper-ingest/translate.py. Lightweight PyMuPDF only; no OCR, no ML, no network.
 license: MIT
 compatibility: Requires the repo venv from scripts/bootstrap_env.sh (Python 3.12, pymupdf==1.28.2, pypdf==6.21.2). Works offline after setup.
 ---
 
 # paper2md
 
-Turn a **two-column research paper PDF** (IEEE/ACM style) into a paragraph-correct
+Turn a **two-column research paper PDF** (IEEE/ACM/USENIX style) into a paragraph-correct
 Markdown file plus its figures and tables.
 
-> **v1 scope: two-column papers only**, IEEE and ACM styles. The script still
+> **v1 scope: two-column papers only**, IEEE, ACM and USENIX styles. The script still
 > contains a per-page one-column fallback and a `--single-column` flag, but that
 > path is **not validated** in FReSearch yet. Do not claim single-column
 > support; if a single-column paper fails, report it.
@@ -146,7 +146,8 @@ Reference runs:
 | Paper | pages | figures | tables | headings |
 |---|---|---|---|---|
 | Affinity-Model (INFOCOM 2025), IEEE | 10 | 7 | 7 (all extracted) | 20 |
-| BEAM (USENIX Security 2024), ACM | 18 | 11 (3 full-width) | 3 (1 extracted, 2 placeholders) | 29 |
+| BEAM (USENIX Security 2024), ACM-like | 18 | 11 (3 full-width) | 3 (1 extracted, 2 placeholders) | 29 |
+| Ares (USENIX Security 2025) | 20 | 9 | 16 (5 extracted, 11 placeholders) | 28 |
 
 Use these numbers to spot regressions.
 
