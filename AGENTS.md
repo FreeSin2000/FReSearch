@@ -9,7 +9,7 @@
 
 ## 当前阶段
 
-P3b（ACM 双栏兼容）与 P4（paper-digest）已完成，等待用户确认后进入 P5（ingest 编排与状态机）。
+P5（ingest 编排与索引）已完成，等待用户确认后进入 P6（关系图与对比）。
 **一次只推进一步，完成即停，等用户确认后再进入下一步。**
 未轮到的步骤不要预写代码或产物。
 
@@ -31,6 +31,8 @@ bash scripts/bootstrap_env.sh          # 环境（幂等，已存在则跳过）
 .venv/bin/python scripts/check_env.py  # 依赖自检
 .venv/bin/python scripts/ingest.py papers/_inbox/<file>.pdf
 .venv/bin/python scripts/build_index.py
+.venv/bin/python scripts/translate.py prepare papers/<slug>
+.venv/bin/python scripts/translate.py assemble papers/<slug> --strict
 .venv/bin/python scripts/build_graph.py
 ```
 

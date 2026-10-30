@@ -3,7 +3,7 @@
 把论文 PDF 变成可检索、可对比的研究库：原始 PDF → 英文 Markdown → 分层中文总结
 → 结构化指纹 + 关系图 → 可检索的目录索引。
 
-> **构建中**：当前完成 P4（总结规范与校验）。编排与索引在 P5–P6 逐步可用，
+> **构建中**：当前完成 P5（ingest 编排与索引）。关系图/对比与全流程测试在 P6–P7 逐步可用，
 > 计划表见上层目录的 [`构建FReSearch.md`](../构建FReSearch.md)。
 
 ## 特点
@@ -27,6 +27,16 @@ cp ~/Downloads/paper.pdf papers/_inbox/
 pi
 #   > 处理 papers/_inbox 里的论文
 #   或显式调用：/skill:paper-ingest
+
+# 也可直接跑脚本（幂等、可续跑）
+.venv/bin/python scripts/ingest.py     papers/_inbox/BEAM.pdf --venue usenixsecurity --year 2024     --slug usenixsecurity2024-beam
+
+# 可选：准备中文全文翻译分块（LLM 逐块翻译后 assemble）
+.venv/bin/python scripts/ingest.py papers/_inbox/BEAM.pdf --translate
+.venv/bin/python scripts/translate.py assemble papers/usenixsecurity2024-beam --strict
+
+# 只重建目录
+.venv/bin/python scripts/ingest.py --reindex
 ```
 
 产物：
@@ -84,7 +94,7 @@ FReSearch/
 | P3 | paper2md | ✅ |
 | P3b | ACM 双栏兼容补丁 | ✅ |
 | P4 | paper-digest | ✅ |
-| P5 | paper-ingest | ⬜ |
+| P5 | paper-ingest | ✅ |
 | P6 | 关系图与对比 | ⬜ |
 | P7 | 全流程测试 | ⬜ |
 | P8 | 冷启动复现与提交 | ⬜ |
