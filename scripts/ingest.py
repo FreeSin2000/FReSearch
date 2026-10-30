@@ -34,6 +34,7 @@ PY = ROOT / ".venv" / "bin" / "python"
 PAPER2MD = ROOT / "skills" / "paper2md" / "scripts" / "paper2md.py"
 VALIDATE = ROOT / "scripts" / "validate_digest.py"
 BUILD_INDEX = ROOT / "scripts" / "build_index.py"
+GRAPH = ROOT / "scripts" / "build_graph.py"
 TRANSLATE = ROOT / "scripts" / "translate.py"
 
 STOP = {"a", "an", "the", "of", "for", "and", "on", "in", "to", "with",
@@ -341,9 +342,10 @@ def process(pdf: Path, args) -> dict:
     save_meta(paper_dir, meta)
     if not args.no_index:
         r = run([str(PY), str(BUILD_INDEX), "--quiet"])
-        if r.returncode != 0:
+        g = run([str(PY), str(GRAPH)])
+        if r.returncode != 0 or g.returncode != 0:
             result["actions"].append("index failed: "
-                                     + (r.stderr or r.stdout).strip()[:200])
+                                     + (r.stderr or r.stdout or g.stderr or g.stdout).strip()[:200])
         else:
             meta["steps"]["indexed_at"] = now()
             if meta["status"] == "digested":
@@ -376,10 +378,13 @@ def main() -> int:
     args = ap.parse_args()
 
     if args.reindex:
-        r = run([str(PY), str(BUILD_INDEX)])
-        sys.stdout.write(r.stdout)
-        sys.stderr.write(r.stderr)
-        return r.returncode
+        rc = 0
+        for script in (BUILD_INDEX, GRAPH):
+            r = run([str(PY), str(script)])
+            sys.stdout.write(r.stdout)
+            sys.stderr.write(r.stderr)
+            rc = rc or r.returncode
+        return rc
 
     if args.slug and len(args.pdfs) > 1:
         ap.error("--slug only makes sense for a single PDF")
