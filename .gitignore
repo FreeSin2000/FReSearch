@@ -1,0 +1,32 @@
+# --- Python / uv ---
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.uv-cache/
+
+# --- 原始 PDF 与生成产物 ---
+# 只提交目录骨架（.gitkeep）；内容按需在本地重建。
+# 注：父目录不被排除，所以 !.../.gitkeep 可以生效。
+papers/**/*.pdf
+papers/_inbox/*
+!papers/_inbox/.gitkeep
+papers/*/source/*
+!papers/*/source/.gitkeep
+papers/*/md/*
+!papers/*/md/.gitkeep
+papers/*/digest/*
+!papers/*/digest/.gitkeep
+papers/*/zh/*
+!papers/*/zh/.gitkeep
+papers/*/meta.json
+
+# 索引是派生数据，可由 scripts/build_index.py / build_graph.py 重建
+index/*
+!index/.gitkeep
+
+# --- 编辑器 / 系统 ---
+.DS_Store
+*.swp
+.idea/
+.vscode/

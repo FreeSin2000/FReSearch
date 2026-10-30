@@ -1,0 +1,5 @@
+# Pinned runtime dependencies for FReSearch.
+# Install with: bash scripts/bootstrap_env.sh
+# Do not add OCR / deep-learning / embedding packages here.
+pymupdf==1.28.2
+pypdf==6.21.2

@@ -1,0 +1,118 @@
+{
+  "schema_version": "1",
+  "paper_id": "infocom2025-affinity-model",
+  "title": {
+    "en": "Affinity-Model: Improving AS Routing Models via AS Affinity Behavior Inference",
+    "zh": "Affinity-Model：通过 AS 亲和行为推断改进 AS 路由模型"
+  },
+  "venue": "infocom",
+  "year": 2025,
+  "doi": null,
+  "arxiv": null,
+  "problem": {
+    "zh": "如何准确建模自治系统的路由行为，解释传统 p2c/p2p 与无谷假设无法覆盖的选路现象。",
+    "en": "How to accurately model AS routing behavior beyond the p2c/p2p and valley-free assumptions."
+  },
+  "gap": {
+    "zh": "观测点稀疏且只能看到最优路径，缺少候选 RIB-in 路径信息，现有模型假设过于简化。",
+    "en": "Sparse VPs reveal only best paths, candidate RIB-in paths are hidden, and existing assumptions are oversimplified."
+  },
+  "insight": {
+    "zh": "AS 对特定邻居存在偏好（affinity），这种偏好可从观测路径与推断候选路径的差异中识别。",
+    "en": "ASes exhibit affinity toward specific neighbors, detectable as discrepancies between observed and inferred candidate paths."
+  },
+  "method": [
+    {
+      "name": "PathRadar",
+      "role": "推断每个源 AS 的候选 RIB-in 路径",
+      "detail": "复用现成的 AS 级路径推断算法，不修改其内部。"
+    },
+    {
+      "name": "XGBoost",
+      "role": "从完整 VP 的链路特征外推全网 d2a 链路",
+      "detail": "以出现次数分组构造正负样本，特征含客户锥、共址、路径位置等。"
+    }
+  ],
+  "assumptions": [
+    "完整 VP 上报的路径能代表其邻居的候选路径集合。",
+    "高频出现的 d2a 链路与低频链路在特征空间可分。"
+  ],
+  "data": [
+    {
+      "name": "Route Views",
+      "scale": "2022-01 快照",
+      "source": "公开 BGP 数据"
+    },
+    {
+      "name": "RIPE RIS",
+      "scale": "2022-01 快照",
+      "source": "公开 BGP 数据"
+    }
+  ],
+  "baselines": ["GR-C", "ST-C"],
+  "metrics": ["precision", "recall", "AS path coverage ratio"],
+  "headline_results": [
+    {
+      "claim": "d2a 链路推断整体精确率与召回率",
+      "value": "81% / 79%",
+      "evidence": "§V-C"
+    },
+    {
+      "claim": "可建模的真实 AS 路由行为比例",
+      "value": "85.9%",
+      "evidence": "§V-D; Fig. 6"
+    }
+  ],
+  "limitations": [
+    {
+      "text": "p2p 链路观测不完整，非无谷路径的召回率偏低。",
+      "evidence": "§V-C"
+    }
+  ],
+  "keywords": [
+    { "zh": "自治系统", "en": "autonomous system" },
+    { "zh": "路由策略", "en": "routing policy" },
+    { "zh": "偏好行为", "en": "affinity behavior" },
+    { "zh": "路径推断", "en": "path inference" }
+  ],
+  "relations": {
+    "builds_on": [
+      {
+        "target": "ext:gao2000:gr-model",
+        "evidence": "§II",
+        "confidence": "explicit",
+        "note": "沿用 Gao-Rexford 的 p2c/p2p 与无谷框架。"
+      }
+    ],
+    "compares_to": [
+      {
+        "target": "ext:gao2000:gr-model",
+        "evidence": "§V-D",
+        "confidence": "explicit",
+        "note": "与 GR-C 的路径覆盖率对比。"
+      }
+    ],
+    "uses_method": [
+      {
+        "target": "ext:pathradar2024:pathradar",
+        "evidence": "§IV-B",
+        "confidence": "explicit"
+      },
+      {
+        "target": "ext:chen2016:xgboost",
+        "evidence": "§IV-C",
+        "confidence": "explicit"
+      }
+    ],
+    "uses_dataset": [
+      {
+        "target": "ext:routeviews:routeviews",
+        "evidence": "§V-B",
+        "confidence": "explicit"
+      }
+    ],
+    "extends": [],
+    "contradicts": [],
+    "applies_to": []
+  }
+}
