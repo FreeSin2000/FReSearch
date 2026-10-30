@@ -24,6 +24,7 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from lib.evidence import EVIDENCE_TOKEN, norm_label, parse_md_anchors
 from lib.mdtext import cjk_count, parse_md_sections
 
 SCHEMA_VERSION = "1"
@@ -33,15 +34,7 @@ REL_TYPES = (
 )
 SLUG_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 TARGET_RE = re.compile(r"^(paper:[a-z0-9-]+|ext:[a-z0-9]+:[a-z0-9-]+|dataset:[a-z0-9-]+)$")
-EVIDENCE_TOKEN = re.compile(
-    r"^(?:§(?:[IVXLC]+(?:-[A-Z])?|\d+(?:\.\d+)*)"
-    r"|Fig\.\s*\d+(?:\.\d+)?"
-    r"|Table\s+(?:[IVXLC]+|\d+)"
-    r"|p\.\s*\d+"
-    r"|unverified)$"
-)
 NUM_RE = re.compile(r"\d+(?:[.,]\d+)*%?")
-ROMAN_RE = re.compile(r"^[IVXLC]+$")
 
 MD_SECTIONS = ("L0 一句话", "L1 简洁总结", "L2 详细总结", "L3 深度剖析")
 L2_SECTIONS = ("背景与问题", "方法", "实验设置", "主要结果", "局限与可拓展点")
@@ -50,8 +43,6 @@ L0_MAX = 60
 L1_RANGE = (150, 300)
 L2_RANGE = (1500, 2500)
 L3_RANGE = (2500, 5000)
-
-
 @dataclass
 class Problem:
     level: str          # "error" | "warning"
@@ -84,20 +75,6 @@ class Report:
 # --------------------------------------------------------------------------- #
 # helpers
 # --------------------------------------------------------------------------- #
-def roman_to_int(s: str) -> int:
-    values = {"I": 1, "V": 5, "X": 10, "L": 50, "C": 100}
-    total, prev = 0, 0
-    for ch in reversed(s):
-        cur = values.get(ch, 0)
-        total += -cur if cur < prev else cur
-        prev = max(prev, cur)
-    return total
-
-
-def norm_label(s: str) -> str:
-    return str(roman_to_int(s)) if ROMAN_RE.match(s) else s
-
-
 def is_nonempty_str(v) -> bool:
     return isinstance(v, str) and bool(v.strip())
 
@@ -323,34 +300,6 @@ def validate_digest_object(obj: dict, *, slug: str | None = None,
 # --------------------------------------------------------------------------- #
 # paper.md cross-checks
 # --------------------------------------------------------------------------- #
-def parse_md_anchors(text: str) -> tuple[set[str], set[str], set[str]]:
-    sections: set[str] = set()
-    current = None
-    figs: set[str] = set()
-    tables: set[str] = set()
-    for line in text.splitlines():
-        # Level 2 = section (IV.), level 3 = subsection (B.). Do not use
-        # [IVXLC] on level 3: "C." is a valid roman numeral and a valid letter.
-        m = re.match(r"^##\s+([IVXLC]+)\.\s", line)
-        if m:
-            current = m.group(1)
-            sections.add(current)
-        mn = re.match(r"^##\s+(\d+(?:\.\d+)*)\s+", line)
-        if mn:
-            sections.add(mn.group(1))
-        mn = re.match(r"^###\s+(\d+(?:\.\d+)*)\s+", line)
-        if mn:
-            sections.add(mn.group(1))
-        m = re.match(r"^###\s+([A-Z])\.\s", line)
-        if m and current:
-            sections.add(f"{current}-{m.group(1)}")
-        if not line.startswith("#"):
-            figs.update(re.findall(r"Fig\.\s*(\d+(?:\.\d+)?)\s*:", line))
-            tables.update(norm_label(t) for t in
-                          re.findall(r"Table\s+([IVXLC]+|\d+)\s*:", line))
-    return sections, figs, tables
-
-
 def check_against_paper(rep: Report, obj: dict, paper_md: str) -> None:
     sections, figs, tables = parse_md_anchors(paper_md)
     norm_md = re.sub(r"\s+", "", paper_md)
