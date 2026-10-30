@@ -8,30 +8,13 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
-PAPERS = ROOT / "papers"
-INDEX = ROOT / "index"
-
-
-def atomic_write(path: Path, text: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(path.suffix + ".tmp")
-    tmp.write_text(text, encoding="utf-8")
-    os.replace(tmp, path)
-
-
-def first_title(md_path: Path) -> str:
-    if not md_path.exists():
-        return ""
-    for line in md_path.read_text(encoding="utf-8").splitlines():
-        if line.startswith("# "):
-            return line[2:].strip()
-    return ""
+from lib.mdtext import first_h1
+from lib.paths import INDEX, PAPERS, ROOT
+from lib.store import atomic_write
 
 
 def entry_for(paper_dir: Path) -> dict | None:
@@ -54,7 +37,7 @@ def entry_for(paper_dir: Path) -> dict | None:
         "status": meta.get("status"),
         "digest": digest is not None,
         "title_en": (digest or {}).get("title", {}).get("en") or meta.get("title_en")
-        or first_title(paper_dir / "md" / "paper.md"),
+        or first_h1(paper_dir / "md" / "paper.md"),
         "title_zh": (digest or {}).get("title", {}).get("zh", ""),
         "venue": (digest or {}).get("venue") or meta.get("venue"),
         "year": (digest or {}).get("year") or meta.get("year"),
