@@ -24,6 +24,8 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from lib.mdtext import cjk_count, parse_md_sections
+
 SCHEMA_VERSION = "1"
 REL_TYPES = (
     "builds_on", "compares_to", "uses_method", "uses_dataset",
@@ -38,7 +40,6 @@ EVIDENCE_TOKEN = re.compile(
     r"|p\.\s*\d+"
     r"|unverified)$"
 )
-CJK_RE = re.compile(r"[\u4e00-\u9fff]")
 NUM_RE = re.compile(r"\d+(?:[.,]\d+)*%?")
 ROMAN_RE = re.compile(r"^[IVXLC]+$")
 
@@ -405,35 +406,6 @@ def check_against_paper(rep: Report, obj: dict, paper_md: str) -> None:
 # --------------------------------------------------------------------------- #
 # digest.zh.md
 # --------------------------------------------------------------------------- #
-def parse_md_sections(text: str) -> tuple[str | None, dict[str, str]]:
-    """Return (h1, {heading: body}) where a heading's body includes its descendants."""
-    h1 = None
-    entries: list[list] = []          # [level, title, lines]
-    for line in text.splitlines():
-        m = re.match(r"^(#{1,6})\s+(.*?)\s*$", line)
-        if m:
-            level, title = len(m.group(1)), m.group(2)
-            if level == 1:
-                h1 = h1 or title
-            else:
-                entries.append([level, title, []])
-        elif entries:
-            entries[-1][2].append(line)
-    sections: dict[str, str] = {}
-    for i, (level, title, lines) in enumerate(entries):
-        body = list(lines)
-        for sub_level, _, sub_lines in entries[i + 1:]:
-            if sub_level <= level:
-                break
-            body.extend(sub_lines)
-        sections[title] = "\n".join(body)
-    return h1, sections
-
-
-def cjk_count(s: str) -> int:
-    return len(CJK_RE.findall(s))
-
-
 def validate_digest_md(text: str) -> Report:
     rep = Report()
     h1, sections = parse_md_sections(text)
