@@ -1,6 +1,6 @@
 ---
 name: paper2md
-description: Convert a two-column IEEE- or ACM-style research paper PDF into Markdown with real paragraphs, Markdown tables and cropped figures (vector or bitmap). Use when a paper PDF is added to papers/_inbox, when a paper needs re-conversion, or when figures/tables must be extracted. Includes an optional English-Markdown → Chinese-Markdown translation step. Lightweight PyMuPDF only; no OCR, no ML, no network.
+description: Convert a two-column IEEE- or ACM-style research paper PDF into Markdown with real paragraphs, Markdown tables and cropped figures (vector or bitmap). Use when a paper PDF is added to papers/_inbox, when a paper needs re-conversion, or when figures/tables must be extracted. Translation is handled separately by paper-ingest/translate.py. Lightweight PyMuPDF only; no OCR, no ML, no network.
 license: MIT
 compatibility: Requires the repo venv from scripts/bootstrap_env.sh (Python 3.12, pymupdf==1.28.2, pypdf==6.21.2). Works offline after setup.
 ---
@@ -21,14 +21,14 @@ Markdown file plus its figures and tables.
 | abstract | inline `Abstract—` | standalone `Abstract` line |
 | table caption | below the table | **above** the table |
 | figures | usually column-width | often **full-width**, multi-panel |
-| refs | may sit before appendices | refs can precede appendices |
+| references | usually at the end | can precede appendices |
 
 ## When to use
 
 - A new PDF is in `papers/_inbox/` and needs `md/paper.md`.
 - An existing `paper.md` is stale (source PDF changed) and must be regenerated.
 - Figures or tables are missing/wrong and need a re-crop.
-- The user explicitly asks for a Chinese full-text translation (`--translate`).
+- The user explicitly asks for a Chinese full-text translation (see `paper-ingest`).
 
 Do **not** use for: book chapters, LaTeX sources, scanned PDFs (no text layer),
 or non-paper documents. Refuse and explain.
@@ -78,7 +78,7 @@ pymupdf_layout" notice on stderr is harmless.
 
 ## How it works
 
-1. **Text** — PyMuPDF `get_text("blocks")`, one block ≈ one paragraph; blocks are
+1. **Text** — PyMuPDF `get_text("dict")` blocks, one block ≈ one paragraph; blocks are
    ordered left column then right column. This is why pypdf is not used: it
    flattens paragraphs and mangles small-caps headings.
 2. **Mask figures/tables** — blocks whose centre lies inside a figure crop or a
@@ -103,8 +103,9 @@ pymupdf_layout" notice on stderr is harmless.
 - Two- vs one-column is decided **per page**, never globally.
 - Within a page, blocks sort by `(column, y)`. Sorting by `y` alone interleaves
   the columns and corrupts every paragraph.
-- Figure crops are **per column**: the crop stays inside the caption's column,
-  bounded below by the previous caption in that column.
+- Figure crops are **per column**, bounded below by the previous caption in that
+  column. If the caption spans both columns, the figure is full-width and the
+  crop uses the whole text width.
 - `TABLE` captions are often centred across the full page width, so associate
   tables with captions by vertical distance only, not by column.
 - Subfigure labels `(a)`, `(b)` may appear as their own lines before the image;
@@ -130,7 +131,7 @@ grep -n '^#' paper.md
 grep -nEi 'authorized licensed use|downloaded on .* from ieee|restrictions apply' paper.md
 
 # 5. no control bytes (would make the file "binary" to grep)
-python -c "import sys;d=open('paper.md','rb').read();print([hex(b) for b in d if b<9 or 13<b<32])"
+"$PY" -c "d=open('paper.md','rb').read();print([hex(b) for b in d if b<9 or 13<b<32])"
 
 # 6. complex tables are placeholders, not silent drops
 grep -n '^> Table' paper.md
@@ -151,8 +152,8 @@ Use these numbers to spot regressions.
 
 ## Gotchas (hard-won; read before editing the script)
 
-- **Vector vs bitmap**: `get_image_info()` finds almost nothing in a paper;
-  `get_drawings()` is what works.
+- **Vector vs bitmap**: for many vector figures `get_image_info()` finds almost
+  nothing; `get_drawings()` is what works. Bitmap panels need both.
 - **`Fig. N:` vs `Fig. X.Y`**: accept both numbering styles.
 - **Small-caps headings**: pypdf turns `INTRODUCTION` into `I NTRODUCTION`; use
   PyMuPDF blocks instead.
@@ -165,8 +166,8 @@ Use these numbers to spot regressions.
 - **References across pages**: keep the reference-mode flag at document scope.
   Resetting it per page turns `K. Claffy, ...` into a heading and mangles refs.
 - **Subsection letters are roman numerals too**: `### C. Evaluation` must be
-  parsed as subsection `C`, not section `III`/`C`. Match `##` for roman sections
-  and `###` for letters.
+  parsed as subsection `C`, not as a roman-numbered section. Match `##` for
+  roman sections and `###` for letters.
 - **A table above a figure** can sit inside the figure's drawing union. Bound the
   crop with the table's bottom rule (and prefer bitmap clusters), or the table
   disappears into the figure.
@@ -175,13 +176,17 @@ Use these numbers to spot regressions.
 
 ## Optional: translate English Markdown → Chinese Markdown
 
-Only when the user explicitly asks. The default pipeline never translates;
-the ingest-level `--translate` switch is implemented in P5, so for now treat this
-as a manual, opt-in step.
+Only when the user explicitly asks; the default pipeline never translates.
+Use the chunked workflow owned by `paper-ingest`:
 
-- Input: `md/paper.md`; output: `zh/paper.zh.md`.
-- Translate in 3–4 chunks (e.g. abstract+intro, method, evaluation, related+refs),
-  appending each chunk; do not rewrite the file from scratch each time.
+```bash
+"$PY" "$ROOT/scripts/translate.py" prepare "$ROOT/papers/$SLUG"
+# translate every zh/chunks/NNNN.md -> NNNN.zh.md
+"$PY" "$ROOT/scripts/translate.py" assemble "$ROOT/papers/$SLUG" --strict
+```
+
+- Output: `zh/paper.zh.md` plus `zh/translation-report.json`.
+- Translate chunk by chunk; do not rewrite the whole file at once.
 - Preserve: heading levels, Markdown tables, code, math, figure/table numbers
   and captions, `[n]` citations. Do not translate in-figure text.
 - Terms: keep the English original in parentheses on first use,
@@ -204,4 +209,4 @@ as a manual, opt-in step.
 - A bad path or corrupt PDF exits non-zero with a traceback; capture the message
   and report it, do not retry blindly.
 - Soft hyphenation is heuristic: rare cases keep a hyphen (e.g. `Inter-net`).
-  Known edge case, not fixed in the migration step.
+  Known edge case, still open.

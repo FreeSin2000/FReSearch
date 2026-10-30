@@ -18,7 +18,8 @@ P6.5（L3 问题/方法深度剖析）已完成，等待用户确认后进入 P7
 - 所有读写都在本仓库内；不修改 `~/.pi/` 或其他全局配置，不写系统 Python 环境。
 - 不使用 OCR、embedding、向量库、在线 embedding 服务；不引入深度学习依赖。
 - 生成数据（PDF、md、digest、meta、index）不进 git；只提交 `skills/`、`specs/`、
-  `scripts/`、`requirements.txt`、`README.md`、`AGENTS.md`、`.pi/settings.json`。
+  `scripts/`、`tests/`、`requirements.txt`、`README.md`、`AGENTS.md`、
+  `.gitignore`、`.pi/settings.json`。
 - 总结中的每个数字/结论必须能追溯到 `§` / `Fig.` / `Table` / 页码；找不到依据就标注存疑，
   不臆造。
 - 不一次性把整篇 `paper.md` 塞进上下文；按章节分块读。
@@ -36,7 +37,7 @@ bash scripts/bootstrap_env.sh          # 环境（幂等，已存在则跳过）
 .venv/bin/python scripts/build_graph.py
 ```
 
-> P2–P6 逐步补齐；命令尚不存在时不要伪造输出。
+> 以上命令均已实现；新增或改名时先更新本文件与对应 SKILL.md。
 
 ## 完成一步后的输出格式
 
@@ -48,6 +49,6 @@ bash scripts/bootstrap_env.sh          # 环境（幂等，已存在则跳过）
 ## 提交风格
 
 - 祈使句，首行 ≤ 72 字符。
-- 默认在 P8 做首次提交；用户明确要求时可随时提交当前已验收的步骤。
-  之后每次只提交一个逻辑变更。
+- P0–P6.5 已分批提交；之后每次只提交一个逻辑变更，提交前先跑
+  `.venv/bin/python -m unittest discover -s tests`。
 - 提交前确认 `git status` 中没有 PDF、`.venv/`、生成数据。

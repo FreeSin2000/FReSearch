@@ -3,18 +3,18 @@
 把论文 PDF 变成可检索、可对比的研究库：原始 PDF → 英文 Markdown → 分层中文总结
 → 结构化指纹 + 关系图 → 可检索的目录索引。
 
-> **构建中**：当前完成 P6（关系图与对比）。全流程复测与冷启动在 P7–P8 收尾，
+> **构建中**：当前完成 P6.5（L3 深度剖析）。全流程复测与冷启动在 P7–P8 收尾，
 > 计划表见上层目录的 [`构建FReSearch.md`](../构建FReSearch.md)。
 
 ## 特点
 
 - **只依赖 LLM + 本地 Python**：不使用 OCR、embedding、向量库或任何在线服务。
 - **分层表示**：人读的 L0 一句话 / L1 简洁 / L2 详细 / L3 深度剖析（只写问题与方法）+ 机器读的结构化指纹（L4）。
-- **关系优先**：显式引用边（builds_on / compares_to / uses_dataset…）+ 规则派生的可比性边。
-- **可回查**：每个数字、结论都标 `§` / `Fig.` / `Table` / 页码，存疑时回 PDF 佐证。
+- **关系分层**：显式引用边（builds_on / compares_to / uses_dataset…）+ 规则派生的可比性边。
+- **可回查**：关键数字与结论都标 `§` / `Fig.` / `Table` / 页码，存疑时回 PDF 佐证。
 - **可移植**：不写死绝对路径，不修改全局配置；换机器只需重装环境并重新放入 PDF。
 
-## 快速开始（P3 起可用）
+## 快速开始
 
 ```bash
 # 1. 环境（幂等；已有 .venv 时只校验不重装）
@@ -29,9 +29,10 @@ pi
 #   或显式调用：/skill:paper-ingest
 
 # 也可直接跑脚本（幂等、可续跑）
-.venv/bin/python scripts/ingest.py     papers/_inbox/BEAM.pdf --venue usenixsecurity --year 2024     --slug usenixsecurity2024-beam
+.venv/bin/python scripts/ingest.py papers/_inbox/BEAM.pdf \
+    --venue usenixsecurity --year 2024 --slug usenixsecurity2024-beam
 
-# 可选：准备中文全文翻译分块（LLM 逐块翻译后 assemble）
+# 可选：为已入库论文准备中文翻译分块（LLM 逐块翻译后 assemble）
 .venv/bin/python scripts/ingest.py papers/_inbox/BEAM.pdf --translate
 .venv/bin/python scripts/translate.py assemble papers/usenixsecurity2024-beam --strict
 
@@ -65,7 +66,7 @@ FReSearch/
 ├── specs/                  # 命名、schema、关系、质量门、术语表
 ├── papers/                 # 每篇论文一个目录，按阶段分子目录
 ├── index/                  # 派生索引（gitignored，可重建）
-├── scripts/                # 环境自检、校验、建索引、建关系图
+├── scripts/                # 环境自检、ingest、校验、翻译分块、索引与关系图
 ├── tests/                  # 单元测试 + 手写校验样例（提交）
 └── requirements.txt        # 精确 pin 的依赖
 ```
@@ -83,7 +84,7 @@ FReSearch/
 
 - v1 只处理有文本层的**双栏**论文 PDF；单栏路径未验证，后续版本再支持。
 - 不支持书籍章节、LaTeX 源码、扫描件；不做 OCR。
-- 公式为 PDF 文本层还原，复杂多行公式可能失真；合并表头的复杂表格会保留标题并生成占位行，需回 PDF 查看。
+- 公式按 PDF 文本层还原，复杂多行公式可能失真；合并表头的复杂表格会保留标题并生成占位行，需回 PDF 查看。
 - 原始 PDF 被 gitignore，换机器时必须重新拷贝。
 
 ## 构建状态
@@ -93,7 +94,7 @@ FReSearch/
 | P1 | 骨架与规范 | ✅ |
 | P2 | 环境与自检 | ✅ |
 | P3 | paper2md | ✅ |
-| P3b | ACM 双栏兼容补丁 | ✅ |
+| P3b | ACM 双栏兼容 | ✅ |
 | P4 | paper-digest | ✅ |
 | P5 | paper-ingest | ✅ |
 | P6 | 关系图与对比 | ✅ |

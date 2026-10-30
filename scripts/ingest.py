@@ -46,6 +46,7 @@ VENUES = [
     ("nsdi", r"\bNSDI\b"),
     ("imc", r"\bIMC\b|Internet Measurement Conference"),
     ("conext", r"\bCoNEXT\b"),
+    ("hotnets", r"\bHotNets\b"),
     ("ccs", r"\bCCS\b|Computer and Communications Security"),
     ("sp", r"IEEE\s+S&P|Symposium on Security and Privacy"),
     ("ton", r"IEEE/ACM\s+Transactions on Networking"),

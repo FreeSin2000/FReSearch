@@ -34,7 +34,7 @@ PY="$ROOT/.venv/bin/python"
 # force a rebuild of the Markdown (digest becomes stale)
 "$PY" "$ROOT/scripts/ingest.py" PAPER.pdf --force
 
-# rebuild the catalog only
+# rebuild catalog, graph and compare only
 "$PY" "$ROOT/scripts/ingest.py" --reindex
 
 # prepare Chinese translation chunks (does not translate)
@@ -54,13 +54,13 @@ PY="$ROOT/.venv/bin/python"
 4. **Convert** — runs `paper2md` only when the source or Markdown hash changed.
 5. **Digest check** — validates an existing `digest/digest.json`; missing or
    invalid means `status: converted`.
-6. **Index** — rebuilds `index/catalog.jsonl` / `catalog.md` (papers without a
-   digest are listed with `digest=false`).
+6. **Index** — rebuilds `index/catalog.jsonl`, `catalog.md`, `graph.jsonl` and `compare.md`
+   (papers without a digest are listed with `digest: false` / `digest=no`).
 7. **Translation (optional)** — splits `md/paper.md` into
    `zh/chunks/NNNN.md` and writes `zh/manifest.json`.
 
 Status machine: `new → converted → digested → done`; `failed` keeps artifacts.
-`--force` re-converts and marks the digest stale; it never deletes a digest.
+`--force` re-converts and marks an existing digest stale; it never deletes a digest.
 
 ## Full workflow for one paper
 
@@ -94,8 +94,8 @@ Status machine: `new → converted → digested → done`; `failed` keeps artifa
 
 ## Quality gates
 
-- Conversion: `7 figs / 7 tables` for Affinity; `11 / 3` for BEAM is the
-  current baseline. A sudden drop means the converter regressed.
+- Conversion: the current baselines are 7 figs / 7 tables for Affinity and
+  11 / 3 for BEAM. A sudden drop means the converter regressed.
 - Digest: `validate_digest.py papers/<slug> --strict` (see paper-digest).
 - Index: `index/catalog.jsonl` parses, `paper_id` unique, paths exist.
 - Re-run: a second `ingest.py` must say `resume` / `conversion up to date`, not

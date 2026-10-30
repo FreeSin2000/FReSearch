@@ -9,17 +9,17 @@
 |---|---|---|
 | `paper:<slug>` | 已入库论文 | `paper:infocom2025-affinity-model` |
 | `ext:<author><year>:<short>` | 未入库的论文/方法引用 | `ext:gao2001:gr-model` |
-| `dataset:<slug>` | 数据集/测量平台 | `dataset:route-views` |
+| `dataset:<slug>` | 数据集/测量平台 | `dataset:routeviews` |
 
 - `author`：第一作者姓氏，小写字母数字。
 - `short`：短标题 kebab-case。
-- 未入库也先记边，后续入库时把 `ext:` 替换为 `paper:`，不丢脉络。
+- 未入库也先记边；后续入库时手动把 `ext:` 替换为 `paper:`，不丢脉络。
 
 ## 2. 边的结构
 
 ```jsonc
 {
-  "target": "ext:gao2000:gr-model",
+  "target": "ext:gao2001:gr-model",
   "evidence": "§II",
   "confidence": "explicit",
   "note": "AM 在 GR 模型基础上放宽 valley-free 假设"
@@ -54,9 +54,9 @@
 
 | 类型 | 对称 | 规则 |
 |---|---|---|
-| `comparable_with` | 是 | 两篇共享 ≥2 个 `keywords.en`，且共享 ≥1 个 `data.name` 或 `metrics`，且都有 `headline_results` |
-| `same_method` | 是 | 归一化后的 `method[].name` 有交集（小写、去空格/连字符） |
-| `same_dataset` | 是 | 归一化后的 `data[].name` 有交集 |
+| `comparable_with` | 是 | 两篇共享 ≥2 个 `keywords.en`，且共享 ≥1 个 `data.name` 或 `metrics` |
+| `same_method` | 是 | `method[].name` 归一化后（小写、去除非字母数字）有交集 |
+| `same_dataset` | 是 | `data[].name` 归一化后（小写、去除非字母数字）有交集 |
 
 - 对称边在 `graph.jsonl` 中按 `from < to` 字典序只写一条。
 - `comparable_with` 的 `matched_on` 记录实际命中的字段，例如
@@ -68,13 +68,13 @@
 `index/graph.jsonl` 一行一条：
 
 ```jsonc
-{"from":"paper:infocom2025-affinity-model","type":"compares_to","to":"ext:gao2000:gr-model",
+{"from":"paper:infocom2025-affinity-model","type":"compares_to","to":"ext:gao2001:gr-model",
  "evidence":"§V-C","confidence":"explicit","note":"与 GR 模型对比覆盖率"}
 ```
 
-`index/compare.md` 由 `comparable_with` 的连通分量生成，每组列出：共同问题、
-共享数据集/指标、各自最好结果、结论差异。只陈述 `digest.json` 里已有的字段，
-不新增判断。
+`index/compare.md` 由 `comparable_with` 的连通分量生成，每组列出共同关键词、
+共享数据集/指标，以及各篇的问题、方法与第一条代表性结果。只陈述
+`digest.json` 里已有的字段，不做结论推断。
 
 ## 6. 校验
 

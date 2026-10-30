@@ -17,14 +17,14 @@
 | 边界网关协议 | Border Gateway Protocol (BGP) | BGP | |
 | 路由信息库 | Routing Information Base (RIB) | RIB | |
 | 入站路由表 | RIB-in | RIB in; 入站 RIB | 邻居通告的候选路径 |
-| 观测点 | vantage point (VP) | VP; 观测点 | |
+| 观测点 | vantage point (VP) | VP | |
 | 互联网交换中心 | Internet Exchange Point (IXP) | IXP; 交换中心 | |
 | 提供商-客户关系 | provider-customer (p2c) | p2c; 提供商-客户 | 反向为 c2p |
 | 对等关系 | peer-to-peer (p2p) | p2p; 对等互联 | |
-| 无谷 | valley-free | valley free; 无谷原则 | 路径满足 p2c/p2p 约束 |
+| 无谷 | valley-free | 无谷原则 | 连字符不可省；路径满足 p2c/p2p 约束 |
 | 前缀 | prefix | 网段 | |
 | AS 路径 | AS path | AS 级路径 | |
-| 路由劫持 | route hijacking | 前缀劫持 | |
+| 路由劫持 | BGP hijacking | 前缀劫持; route hijacking | 前缀劫持是其子类 |
 | 路由泄漏 | route leak | 路由泄露 | |
 | 流量工程 | traffic engineering | TE | |
 | 互联网路由注册库 | Internet Routing Registry (IRR) | IRR | |
@@ -34,7 +34,7 @@
 | 路由策略 | routing policy | 选路策略 | |
 | 候选路径 | candidate path | 候选路由 | |
 | 路径推断 | path inference | 路由推断 | |
-| 目的端 | destination | 目的地 | |
+| 目的地 | destination | 目的端 | |
 | 策略聚合 | policy aggregation | 策略归并 | |
 
 ## 方法与实验
@@ -53,4 +53,4 @@
 | 泛化 | generalization | 外推能力 | |
 | 交叉验证 | cross-validation | CV | |
 | 监督学习 | supervised learning | 有监督学习 | |
-| 推理/推断 | inference | 推测 | 按语境选“推断” |
+| 推断 | inference | 推理; 推测 | 统一用“推断” |

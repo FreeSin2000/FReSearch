@@ -5,7 +5,7 @@
 
 ## 1. 处理范围
 
-- 输入：有文本层的研究论文 PDF，IEEE/ACM 双栏为主；单栏 preprint 用 `--single-column`。
+- 输入：有文本层的研究论文 PDF，v1 只验证 IEEE/ACM 双栏；单栏路径未验证，`--single-column` 仅为实验开关。
 - 不支持：书籍章节、LaTeX 源码、扫描件（无文本层）、OCR、非论文 PDF。
 - 遇到不支持的类型：停止并说明原因，不生成半成品。
 
@@ -18,7 +18,7 @@
 - 全小写 kebab-case，只含 `[a-z0-9-]`。
 - `venue`：会议/期刊简称，见下表；不确定时用 `arxiv` 或 `unknown`。
 - `year`：4 位出版年。
-- `short-title`：标题中 2–4 个实词，去掉停用词与副标题。
+- `short-title`：标题中 2–3 个实词，去掉停用词与副标题。
 - 重名：追加 `-2`、`-3`。
 - 例：标题 *Affinity-Model: Improving AS Routing Models…* → `infocom2025-affinity-model`；
   *HopLab: A Topology…* → `sigcomm2024-hoplab`。
@@ -43,7 +43,7 @@ papers/<slug>/
 │   ├── pics/figN.png       # 图
 │   └── figures.json        # 图清单（label/caption/page/clip/file）
 ├── digest/
-│   ├── digest.zh.md        # L0 + L1 + L2，中文
+│   ├── digest.zh.md        # L0–L3，中文
 │   └── digest.json         # L4 结构化指纹 + relations
 └── zh/paper.zh.md          # 可选：中文全文翻译
 ```
@@ -66,15 +66,15 @@ papers/<slug>/
 所有事实性陈述必须带锚点，格式统一：
 
 ```
-§IV-B          # 节
-§V-C           # 子节
+§IV-B          # 节-子节（IEEE）
+§5.2           # 节-子节（ACM）
 Fig. 5         # 图
 Table VI       # 表
 p. 7           # 页码（PDF 物理页）
 ```
 
 - `headline_results[].evidence` 与 `limitations[].evidence` **必填**。
-- 一个结论跨多处时用 `"§V-C; Fig. 6"`。
+- 一个结论跨多处时用 `;` 或 `/` 分隔，如 `"§V-C; Fig. 6"`。
 - 无法定位则写 `"unverified"`，并在总结中标注「存疑」，不得编造。
 
 ## 6. 状态机（meta.json）
@@ -104,8 +104,9 @@ new → converted → digested → done
 
 - 每步开始前校验前置 hash：`source_sha256` 变则整篇重跑；`paper_md_sha256` 变则重跑
   digest 与 index；`digest_sha256` 变则重跑 index。
-- 前置产物比当前源新（hash 不匹配）时标为 `stale`，由对应步骤重建，不静默沿用。
-- `--force`：忽略状态与 hash，全量重跑，但仍保留旧产物直到新产物写成功（先写临时文件再原子替换）。
+- 前置产物的 hash 与当前输入不匹配时标为 `stale`，由对应步骤重建，不静默沿用。
+- `--force`：忽略状态与 hash，重新转换 Markdown；若已有 digest 则标记为 stale。
+  新产物先写临时文件再原子替换，失败不丢旧产物。
 
 ## 7. 幂等与并发
 
@@ -126,17 +127,17 @@ new → converted → digested → done
 `index/graph.jsonl` 一行一条边：
 
 ```jsonc
-{"from":"paper:infocom2025-affinity-model","type":"compares_to","to":"ext:gao2000:gr-model",
- "evidence":"§V-C","confidence":"explicit","matched_on":null}
+{"from":"paper:infocom2025-affinity-model","type":"compares_to","to":"ext:gao2001:gr-model",
+ "evidence":"§V-C","confidence":"explicit"}
 ```
 
-- `from` / `to`：`paper:<slug>` 或 `ext:<第一作者><年份>:<短标题>`。
+- `from` / `to`：`paper:<slug>`、`ext:<第一作者><年份>:<短标题>` 或 `dataset:<slug>`。
 - `confidence`：`explicit`（LLM 抽取，必须有证据）或 `derived`（脚本按规则计算）。
 
 ## 9. git 边界
 
-提交：`skills/`、`specs/`、`scripts/`、`requirements.txt`、`README.md`、`AGENTS.md`、
-`.pi/settings.json`、各处 `.gitkeep`。
+提交：`skills/`、`specs/`、`scripts/`、`tests/`、`requirements.txt`、`README.md`、
+`AGENTS.md`、`.gitignore`、`.pi/settings.json`、各处 `.gitkeep`。
 
 忽略：`.venv/`、`papers/**/*.pdf`、`papers/*/{source,md,digest,zh}/*`（保留 `.gitkeep`）、
 `papers/*/meta.json`、`index/*`（保留 `.gitkeep`）。
