@@ -200,6 +200,13 @@ def figure_clips(doc):
                     caps.append((m.group(1), re.sub(r"\s+", " ", cap).strip(), ln["bbox"]))
                     break
         caps.sort(key=lambda c: c[2][1])
+        seen_labels = set()
+        unique = []
+        for c in caps:
+            if c[0] not in seen_labels:
+                seen_labels.add(c[0])
+                unique.append(c)
+        caps = unique
         res = []
         for label, cap, bb in caps:
             y0 = bb[1]
@@ -232,6 +239,10 @@ def figure_clips(doc):
                 boxes = imgs + [r for r in draws if r.intersects(near)]
             else:
                 boxes = densest_cluster(draws)
+            if not boxes:
+                # A caption with no drawing/image above it is body text such as
+                # "Figure 14. ..." at the start of a paragraph, not a caption.
+                continue
             clip = pymupdf.Rect(x0, ytop, x1, y0 - 2)
             if boxes:
                 u = boxes[0]
@@ -382,6 +393,9 @@ def numeric_heading(f):
         return None
     if title[-1] in ".,;:-" or not title[0].isupper():
         return None
+    if title.split()[-1].lower() in {"in", "on", "of", "for", "to", "and",
+                                     "or", "the", "a", "an", "with", "via", "by"}:
+        return None
     return num, title
 
 
@@ -394,6 +408,12 @@ def peel_headings(lines):
         m1 = H1.match(f)
         if m1 and re.fullmatch(r"[A-Z][A-Z \-]*", m1.group(2)):
             heads.append(f"## {m1.group(1)}. {titlecase(m1.group(2))}")
+            lines = lines[1:]
+            continue
+        mapp = re.match(r"^APPENDIX\s+([A-H])\s*(.*)$", f)
+        if mapp:
+            tail = mapp.group(2).strip()
+            heads.append(f"## Appendix {mapp.group(1)}" + (f": {tail}" if tail else ""))
             lines = lines[1:]
             continue
         mn = numeric_heading(f)
@@ -609,6 +629,7 @@ def main():
 
     # Document-level: references continue across pages, so this must not reset.
     refmode, refbuf = False, []
+    seen_figs = set()
 
     for pno, page in enumerate(doc):
         figclips = [c for _, _, c in clips.get(pno, [])]
@@ -637,13 +658,15 @@ def main():
             lines = [l["text"] for l in b["lines"]]
             first = lines[0].strip()
             is_tabcap = bool(CAP_TAB.match(first))
-            if not is_tabcap and any(inside(b["bbox"], c) for c in figclips):
+            is_figcap = bool(CAP_FIG.match(first))
+            if not (is_tabcap or is_figcap) and any(inside(b["bbox"], c) for c in figclips):
                 continue
-            if not is_tabcap and any(inside(b["bbox"], c) for c in tableclips):
+            if not (is_tabcap or is_figcap) and any(inside(b["bbox"], c) for c in tableclips):
                 continue
 
             if refmode:
-                if re.match(r"^(?:Appendix\b|[A-Z]\s{2,}[A-Z][a-z])", first):
+                if re.match(r"^(?:APPENDIX|Appendix)\b", first, re.I) \
+                        or re.match(r"^[A-Z]\s{2,}[A-Z][a-z]", first):
                     flush_refs(md, refbuf, wordset)
                     refmode = False
                 else:
@@ -655,8 +678,10 @@ def main():
                 continue
 
             mfig = CAP_FIG.match(first)
-            if mfig and label_near(mfig.group(1), b["bbox"], clips.get(pno, [])):
+            if (mfig and mfig.group(1) not in seen_figs
+                    and label_near(mfig.group(1), b["bbox"], clips.get(pno, []))):
                 label = mfig.group(1)
+                seen_figs.add(label)
                 cap = soft_hyphen_text(figcap.get(label) or mfig.group(2).strip(), wordset)
                 fn = fig_filename(label)
                 md.append(f"![Fig. {label}: {cap}](pics/{fn})\n")

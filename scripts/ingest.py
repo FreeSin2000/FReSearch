@@ -37,14 +37,18 @@ TRANSLATE = ROOT / "scripts" / "translate.py"
 
 
 def find_by_hash(source_hash: str) -> Path | None:
-    for meta_path in PAPERS.glob("*/meta.json"):
+    matches = []
+    for meta_path in sorted(PAPERS.glob("*/meta.json")):
         try:
             meta = json.loads(meta_path.read_text(encoding="utf-8"))
         except json.JSONDecodeError:
             continue
         if meta.get("source_sha256") == source_hash:
-            return meta_path.parent
-    return None
+            matches.append((meta.get("status"), meta_path.parent))
+    if not matches:
+        return None
+    rank = {"done": 4, "digested": 3, "converted": 2, "new": 1, "failed": 0}
+    return max(matches, key=lambda m: rank.get(m[0], -1))[1]
 
 
 def resolve_slug(info: dict, source_hash: str, override: str | None) -> Path:
@@ -96,11 +100,12 @@ def process(pdf: Path, args) -> dict:
               "figures": 0, "tables": 0, "actions": [], "error": None}
 
     existing = find_by_hash(source_hash)
-    if existing and not args.force:
+    if existing:
         paper_dir = existing
         meta = load_meta(paper_dir)
         first_time = False
-        result["actions"].append("resume: existing paper")
+        result["actions"].append("force: existing paper" if args.force
+                                 else "resume: existing paper")
         info = {"title_en": meta.get("title_en", ""), "authors": meta.get("authors", ""),
                 "venue": meta.get("venue"), "year": meta.get("year"),
                 "doi": meta.get("doi"), "arxiv": meta.get("arxiv")}
@@ -181,7 +186,7 @@ def process(pdf: Path, args) -> dict:
         ok, why = validate_digest(paper_dir)
         if ok and "digest" not in meta.get("stale", []):
             meta["digest_sha256"] = sha256_file(digest_json)
-            meta["steps"]["digested_at"] = meta["steps"].get("digested_at") or now()
+            meta["steps"]["digested_at"] = meta["steps"].get("digested_at") or utc_now()
             meta["status"] = "digested"
             meta["stale"] = [s for s in meta.get("stale", []) if s != "digest"]
             result["actions"].append("digest valid")
