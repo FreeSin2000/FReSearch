@@ -54,7 +54,7 @@ class TestDigestJson(unittest.TestCase):
         obj = load_json()
         obj["relations"]["builds_on"][0]["target"] = "gao2000"
         rep = vd.validate_digest_object(obj)
-        self.assertIn("paper:<slug> or ext:<author>:<short>", messages(rep))
+        self.assertIn("must be paper:<slug>", messages(rep))
 
     def test_explicit_cannot_be_unverified(self) -> None:
         obj = load_json()

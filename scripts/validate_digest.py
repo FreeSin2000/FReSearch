@@ -30,9 +30,9 @@ REL_TYPES = (
     "extends", "contradicts", "applies_to",
 )
 SLUG_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
-TARGET_RE = re.compile(r"^(paper:[a-z0-9-]+|ext:[a-z0-9]+:[a-z0-9-]+)$")
+TARGET_RE = re.compile(r"^(paper:[a-z0-9-]+|ext:[a-z0-9]+:[a-z0-9-]+|dataset:[a-z0-9-]+)$")
 EVIDENCE_TOKEN = re.compile(
-    r"^(?:§[IVXLC]+(?:-[A-Z])?"
+    r"^(?:§(?:[IVXLC]+(?:-[A-Z])?|\d+(?:\.\d+)*)"
     r"|Fig\.\s*\d+(?:\.\d+)?"
     r"|Table\s+(?:[IVXLC]+|\d+)"
     r"|p\.\s*\d+"
@@ -297,7 +297,7 @@ def validate_digest_object(obj: dict, *, slug: str | None = None,
                     continue
                 target = edge.get("target")
                 if not is_nonempty_str(target) or not TARGET_RE.match(target):
-                    rep.err(f"{ew}.target", "must be paper:<slug> or ext:<author>:<short>")
+                    rep.err(f"{ew}.target", "must be paper:<slug>, ext:<author>:<short> or dataset:<slug>")
                 conf = edge.get("confidence")
                 if conf not in ("explicit", "derived"):
                     rep.err(f"{ew}.confidence", "explicit or derived required")
@@ -332,6 +332,12 @@ def parse_md_anchors(text: str) -> tuple[set[str], set[str], set[str]]:
         if m:
             current = m.group(1)
             sections.add(current)
+        mn = re.match(r"^##\s+(\d+(?:\.\d+)*)\s+", line)
+        if mn:
+            sections.add(mn.group(1))
+        mn = re.match(r"^###\s+(\d+(?:\.\d+)*)\s+", line)
+        if mn:
+            sections.add(mn.group(1))
         m = re.match(r"^###\s+([A-Z])\.\s", line)
         if m and current:
             sections.add(f"{current}-{m.group(1)}")
@@ -354,6 +360,11 @@ def check_against_paper(rep: Report, obj: dict, paper_md: str) -> None:
             if m:
                 key = m.group(1) + (f"-{m.group(2)}" if m.group(2) else "")
                 if key not in sections:
+                    rep.err(where, f"section anchor not found in paper.md: {part}")
+                continue
+            m = re.match(r"^§(\d+(?:\.\d+)*)$", part)
+            if m:
+                if m.group(1) not in sections:
                     rep.err(where, f"section anchor not found in paper.md: {part}")
                 continue
             m = re.match(r"^Fig\.\s*(\d+(?:\.\d+)?)$", part)
@@ -465,7 +476,8 @@ def validate_digest_md(text: str) -> Report:
         for name in L2_SECTIONS:
             if name not in sections:
                 rep.err(f"L2/{name}", "subsection missing")
-        anchors = len(re.findall(r"(§[IVXLC]+(?:-[A-Z])?|Fig\.\s*\d+|Table\s+\w+)", body))
+        anchors = len(re.findall(
+            r"(§(?:[IVXLC]+(?:-[A-Z])?|\d+(?:\.\d+)*)|Fig\.\s*\d+|Table\s+\w+)", body))
         if anchors < 5:
             rep.warn("L2 详细总结", f"only {anchors} anchors; expected >=5")
 

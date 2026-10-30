@@ -8,7 +8,8 @@
 | 形式 | 用途 | 例子 |
 |---|---|---|
 | `paper:<slug>` | 已入库论文 | `paper:infocom2025-affinity-model` |
-| `ext:<author><year>:<short>` | 未入库的引用目标 | `ext:gao2000:gr-model` |
+| `ext:<author><year>:<short>` | 未入库的论文/方法引用 | `ext:gao2001:gr-model` |
+| `dataset:<slug>` | 数据集/测量平台 | `dataset:route-views` |
 
 - `author`：第一作者姓氏，小写字母数字。
 - `short`：短标题 kebab-case。
