@@ -15,34 +15,16 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import re
 import sys
-from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
-PAPERS = ROOT / "papers"
-INDEX = ROOT / "index"
+from lib.mdtext import norm, squash
+from lib.paths import INDEX, PAPERS
+from lib.store import atomic_write
 
 REL_TYPES = ("builds_on", "compares_to", "uses_method", "uses_dataset",
              "extends", "contradicts", "applies_to")
 SYMMETRIC = {"comparable_with", "same_method", "same_dataset"}
-
-
-def atomic_write(path: Path, text: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(path.suffix + ".tmp")
-    tmp.write_text(text, encoding="utf-8")
-    os.replace(tmp, path)
-
-
-def norm(s: str) -> str:
-    return re.sub(r"[^a-z0-9]+", " ", (s or "").lower()).strip()
-
-
-def squash(s: str) -> str:
-    """For names: 'Route Views' and 'RouteViews' must match."""
-    return re.sub(r"[^a-z0-9]+", "", (s or "").lower())
 
 
 def load_digests() -> dict[str, dict]:
