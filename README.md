@@ -67,6 +67,7 @@ FReSearch/
 ├── papers/                 # 每篇论文一个目录，按阶段分子目录
 ├── index/                  # 派生索引（gitignored，可重建）
 ├── scripts/                # 环境自检、ingest、校验、翻译分块、索引与关系图
+│   └── lib/                # 共享：路径、原子写、md 解析、PDF 元数据、锚点
 ├── tests/                  # 单元测试 + 手写校验样例（提交）
 └── requirements.txt        # 精确 pin 的依赖
 ```
