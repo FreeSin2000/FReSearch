@@ -42,11 +42,13 @@ CJK_RE = re.compile(r"[\u4e00-\u9fff]")
 NUM_RE = re.compile(r"\d+(?:[.,]\d+)*%?")
 ROMAN_RE = re.compile(r"^[IVXLC]+$")
 
-MD_SECTIONS = ("L0 一句话", "L1 简洁总结", "L2 详细总结")
+MD_SECTIONS = ("L0 一句话", "L1 简洁总结", "L2 详细总结", "L3 深度剖析")
 L2_SECTIONS = ("背景与问题", "方法", "实验设置", "主要结果", "局限与可拓展点")
+L3_SECTIONS = ("现有方法的痛点", "问题的本质", "突破思路", "方法如何实现", "如何证明")
 L0_MAX = 60
 L1_RANGE = (150, 300)
 L2_RANGE = (1500, 2500)
+L3_RANGE = (2500, 5000)
 
 
 @dataclass
@@ -480,6 +482,21 @@ def validate_digest_md(text: str) -> Report:
             r"(§(?:[IVXLC]+(?:-[A-Z])?|\d+(?:\.\d+)*)|Fig\.\s*\d+|Table\s+\w+)", body))
         if anchors < 5:
             rep.warn("L2 详细总结", f"only {anchors} anchors; expected >=5")
+
+    if "L3 深度剖析" in sections:
+        body = sections["L3 深度剖析"]
+        n = cjk_count(body)
+        if n == 0:
+            rep.err("L3 深度剖析", "no Chinese text")
+        elif not (L3_RANGE[0] <= n <= L3_RANGE[1]):
+            rep.warn("L3 深度剖析", f"{n} Chinese chars outside {L3_RANGE}")
+        for name in L3_SECTIONS:
+            if name not in sections:
+                rep.err(f"L3/{name}", "subsection missing")
+        anchors = len(re.findall(
+            r"(§(?:[IVXLC]+(?:-[A-Z])?|\d+(?:\.\d+)*)|Fig\.\s*\d+|Table\s+\w+)", body))
+        if anchors < 8:
+            rep.warn("L3 深度剖析", f"only {anchors} anchors; expected >=8")
 
     return rep
 

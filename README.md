@@ -9,7 +9,7 @@
 ## 特点
 
 - **只依赖 LLM + 本地 Python**：不使用 OCR、embedding、向量库或任何在线服务。
-- **双层表示**：人读的分层总结（L0 一句话 / L1 简洁 / L2 详细）+ 机器读的结构化指纹（L3）。
+- **分层表示**：人读的 L0 一句话 / L1 简洁 / L2 详细 / L3 深度剖析（只写问题与方法）+ 机器读的结构化指纹（L4）。
 - **关系优先**：显式引用边（builds_on / compares_to / uses_dataset…）+ 规则派生的可比性边。
 - **可回查**：每个数字、结论都标 `§` / `Fig.` / `Table` / 页码，存疑时回 PDF 佐证。
 - **可移植**：不写死绝对路径，不修改全局配置；换机器只需重装环境并重新放入 PDF。
@@ -46,8 +46,8 @@ papers/<slug>/
 ├── meta.json               # 元数据 + 处理状态 + 各步 hash
 ├── source/paper.pdf        # 原始文件（不进 git）
 ├── md/paper.md             # 英文 Markdown + pics/ + figures.json
-├── digest/digest.zh.md     # L0/L1/L2 中文总结（术语括注英文）
-├── digest/digest.json      # L3 结构化指纹 + relations
+├── digest/digest.zh.md     # L0/L1/L2/L3 中文总结（L3 只写问题与方法）
+├── digest/digest.json      # L4 结构化指纹 + relations
 └── zh/paper.zh.md          # 可选：--translate 生成的中文全文
 index/
 ├── catalog.jsonl           # 一行一篇，机器读
@@ -74,6 +74,7 @@ FReSearch/
 
 1. **转换不产出中文**：`paper.md` 保持英文原样，便于核对术语与数字；中文只出现在总结层。
 2. **总结默认中文**：关键术语首次出现括注英文，如「偏好行为（affinity behavior）」。
+   L3 深度剖析只写问题与方法，弱化结果对比和优越性宣传。
 3. **无证据不入库**：`headline_results` 与 `limitations` 必须带 `evidence` 字段。
 4. **关系分两类**：LLM 只抽显式边；`comparable_with` 等派生边由脚本按固定规则计算，可复算。
 5. **断点续跑**：`meta.json` 记录状态与各步 sha256，只重跑失效步骤；`--force` 全量重跑。
@@ -96,5 +97,6 @@ FReSearch/
 | P4 | paper-digest | ✅ |
 | P5 | paper-ingest | ✅ |
 | P6 | 关系图与对比 | ✅ |
+| P6.5 | L3 问题/方法深度剖析 | ✅ |
 | P7 | 全流程测试 | ⬜ |
 | P8 | 冷启动复现与提交 | ⬜ |

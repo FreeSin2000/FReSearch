@@ -44,7 +44,7 @@ papers/<slug>/
 │   └── figures.json        # 图清单（label/caption/page/clip/file）
 ├── digest/
 │   ├── digest.zh.md        # L0 + L1 + L2，中文
-│   └── digest.json         # L3 结构化指纹 + relations
+│   └── digest.json         # L4 结构化指纹 + relations
 └── zh/paper.zh.md          # 可选：中文全文翻译
 ```
 

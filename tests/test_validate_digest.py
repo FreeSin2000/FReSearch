@@ -99,6 +99,11 @@ class TestDigestMarkdown(unittest.TestCase):
         rep = vd.validate_digest_md(text)
         self.assertIn("section missing", messages(rep))
 
+    def test_missing_l3(self) -> None:
+        text = load_md().split("## L3 深度剖析")[0]
+        rep = vd.validate_digest_md(text)
+        self.assertIn("section missing", messages(rep))
+
     def test_short_l2_is_warning(self) -> None:
         rep = vd.validate_digest_md(load_md())
         self.assertTrue(any(p.where == "L2 详细总结" and "outside" in p.msg

@@ -1,6 +1,6 @@
 ---
 name: paper-digest
-description: Turn an English paper.md into a Chinese four-layer digest (L0 one-liner, L1 concise, L2 detailed, L3 structured fingerprint plus explicit relations) and validate it. Use after paper2md, when a digest is stale, or when relations must be extracted. No full-text translation and no fabrication; every number needs an anchor.
+description: Turn an English paper.md into a Chinese five-layer digest (L0 one-liner, L1 concise, L2 detailed, L3 problem/method deep dive, L4 structured fingerprint plus explicit relations) and validate it. Use after paper2md, when a digest is stale, or when relations must be extracted. No full-text translation and no fabrication; every number needs an anchor.
 license: MIT
 compatibility: Requires the repo venv (scripts/bootstrap_env.sh) and scripts/validate_digest.py. Reads papers/<slug>/md/paper.md; writes papers/<slug>/digest/.
 ---
@@ -23,7 +23,8 @@ If `paper.md` is missing or empty: stop and run the paper2md skill first.
 ## Output contract
 
 - `digest/digest.zh.md`: exactly the sections in `digest-schema.md` §4
-  (`## L0 一句话`, `## L1 简洁总结`, `## L2 详细总结` + five L2 subsections).
+  (`## L0` / `## L1` / `## L2` + five L2 subsections / `## L3 深度剖析`
+  + five L3 subsections).
 - `digest/digest.json`: every field in `digest-schema.md` §1; unknown fields are
   not allowed. `paper_id` must equal the directory slug.
 
@@ -64,7 +65,28 @@ Subsections in this order: 背景与问题 / 方法 / 实验设置 / 主要结�
 - “可拓展点” may be your own inference, but mark it as inference (「可进一步……」),
   not as the authors' claim.
 
-### 5. Build digest.json
+### 5. Write L3 deep dive (problem + method only)
+
+This is longer than L2 but deliberately narrow: **no result dumping, no
+workload summary, no “our method is better” rhetoric**. A reader should be able
+to restate the authors' reasoning and judge the argument.
+
+- `现有方法的痛点`: for each pain point write symptom → why the existing approach
+  cannot fix it → evidence (§/Fig./Table). Do not just list weaknesses.
+- `问题的本质`: name the structural cause (missing information, wrong
+  assumption, incentives, measurement bias, complexity). Separate engineering
+  limits from fundamental conflicts.
+- `突破思路`: what viewpoint/assumption/signal the paper changes, and why that
+  bypasses the pain points.
+- `方法如何实现`: inputs/outputs, components in order, key formulas, thresholds,
+  parameters, complexity or engineering constraints. Aim for “reproducible idea”.
+- `如何证明`: the argument chain — which property is established first, then which
+  experiment answers which doubt (external ground truth, ablation, baselines,
+  robustness, deployment). Mention a number only when it carries the argument.
+
+Do not pad L3 to hit the length: 2500–5000 Chinese characters, ≥8 anchors.
+
+### 6. Build digest.json
 
 Fill every field. Rules that matter:
 
@@ -75,7 +97,7 @@ Fill every field. Rules that matter:
 - `keywords`: ≥3, `en` uses the paper's own term (feeds search + relation derivation).
 - `doi`/`arxiv` unknown → `null`.
 
-### 6. Extract explicit relations only
+### 7. Extract explicit relations only
 
 For each relation type in `specs/relations.md` §3, scan the text for explicit
 statements. Rules:
@@ -87,7 +109,7 @@ statements. Rules:
   derived by `scripts/build_graph.py` in P6.
 - When unsure, drop the edge. A missing edge is cheaper than a wrong one.
 
-### 7. Validate
+### 8. Validate
 
 ```bash
 ROOT="$(git rev-parse --show-toplevel)"
@@ -99,9 +121,9 @@ ROOT="$(git rev-parse --show-toplevel)"
 - On failure, fix the digest, not `paper.md`. If the paper truly lacks the data
   (e.g. no limitations), leave the field empty and explain in L2.
 
-### 8. Report
+### 9. Report
 
-Report: output paths, L0/L1/L2 character counts, number of methods/keywords/edges,
+Report: output paths, L0/L1/L2/L3 character counts, number of methods/keywords/edges,
 validator output, and anything marked 存疑. Then stop; do not update `index/`
 (that is the ingest step, P5).
 
@@ -125,6 +147,7 @@ validator output, and anything marked 存疑. Then stop; do not update `index/`
 ## Do not
 
 - Do not translate the full text (that is `--translate`, P5).
+- Do not turn L3 into a results section: no “significant/2.3x/first” sales language.
 - Do not edit `md/paper.md` or the PDF.
 - Do not write `index/` or `meta.json` (P5 orchestration owns them).
 - Do not add relation types beyond `specs/relations.md`.
